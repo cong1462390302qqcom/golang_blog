@@ -3,6 +3,7 @@ package controllers
 import (
 	"github.com/gin-gonic/gin"
 	"golang_blog/config"
+	"golang_blog/middleware"
 	"golang_blog/models"
 	"golang_blog/utils"
 	"strconv"
@@ -107,10 +108,11 @@ func (pc *PostController) DeletePost(c *gin.Context) {
 		utils.InternalServerError(c, "Failed to delete post "+err.Error())
 		return
 	}
-	if err = config.DB.Delete("Comment", "post_id=?", postId).Error; err != nil {
+	if err = config.DB.Where("post_id = ?", postId).Delete(&models.Comment{}).Error; err != nil {
 		utils.InternalServerError(c, "Filed to delete comment "+err.Error())
 		return
 	}
+	utils.Success(c, "delete success")
 }
 func (pc *PostController) GetPosts(c *gin.Context) {
 	var posts []models.Post
@@ -124,9 +126,13 @@ func (pc *PostController) GetPosts(c *gin.Context) {
 	if pageSize < 1 || pageSize > 100 {
 		pageSize = 10
 	}
-
-	config.DB.Preload("User").Order("created_at desc").Limit(pageSize).Offset((page - 1) * pageSize).Find(&posts)
-
+	middleware.AuthMiddleware()
+	userID, exists := c.Get("user_id")
+	if !exists {
+		config.DB.Preload("User").Order("created_at desc").Limit(pageSize).Offset((page - 1) * pageSize).Find(&posts)
+	} else {
+		config.DB.Preload("User").Order("created_at desc").Limit(pageSize).Offset((page-1)*pageSize).Find(&posts, "user_id =?", userID)
+	}
 	//获取数据总量
 	var total int64
 	config.DB.Model(&models.Post{}).Count(&total)

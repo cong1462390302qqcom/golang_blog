@@ -40,6 +40,11 @@ func SetupRoutes() *gin.Engine {
 			posts.PUT("/:id", postController.UpdatePost)
 			posts.DELETE("/:id", postController.DeletePost)
 		}
+		// 评论相关路由
+		comments := authenticated.Group("/posts/:post_id/comments")
+		{
+			comments.POST("", commentController.CreateComment)
+		}
 	}
 	// 公开路由（无需认证）
 	//public := api.Group("")
@@ -47,9 +52,11 @@ func SetupRoutes() *gin.Engine {
 		authenticated.GET("/posts", postController.GetPosts)
 		authenticated.GET("/posts/:id", postController.GetPost)
 	}
+
 	comments := api.Group("/comments")
 	{
 		comments.GET("/post/:post_id", commentController.GetComments)
 	}
+
 	return r
 }
